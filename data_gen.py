@@ -30,12 +30,16 @@ def get_fonts():
 
 fonts = get_fonts()
 chars = list(string.ascii_letters) + list(string.digits)
+f_association = []
 for font_name in fonts:
   for tchar in chars:
-    font = ImageFont.truetype(font_name + ".ttf", 16) #eventual loop through all fonts
+    font = ImageFont.truetype(font_name , 16) #eventual loop through all fonts
     size = font.getsize(tchar)
     offset = ((dim_x - size[0]) // 2, (dim_y - size[1]) // 2)
     rez = (dim_x,dim_y)
-    f_association = []
-    fname = resource_folder + font_name + "_" + tchar +".png"
+    fname = resource_folder + font_name[:-4] + "_" + tchar +".png" #Need to cut off file extension
     MakeImg(tchar,font, fname ,rez,offset)
+    f_association.append(fname + "," + tchar)
+
+with open('Train.csv', 'w') as f:
+    f.write('\n'.join(f_association))

@@ -15,6 +15,8 @@ training_file = "Train.csv"
 #Global association :(
 f_association = []
 
+#Beginning ideas yoinked from https://nicholastsmith.wordpress.com/2017/10/14/deep-learning-ocr-using-tensorflow-and-python/
+
 def MakeImg(t, f, fn, s, o, bg_color, text_color):
     '''
     Generate an image of text

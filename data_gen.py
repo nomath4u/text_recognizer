@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import numpy as np
 import shutil
 import string
@@ -10,6 +11,9 @@ resource_folder = "./font_data/"
 font_dir = "/usr/share/fonts/truetype"
 data_dir = "./font_data"
 training_file = "Train.csv"
+
+#Global association :(
+f_association = []
 
 def MakeImg(t, f, fn, s = (100, 100), o = (16, 8)):
     '''
@@ -40,24 +44,31 @@ def setup_folders():
         os.mkdir(data_dir)
     if os.path.exists(training_file):
         os.remove(training_file)
+    
+def make_specific_image(font_name, tchar):
+      font = ImageFont.truetype(font_name , 16)
+      size = font.getsize(tchar)
+      offset = ((dim_x - size[0]) // 2, (dim_y - size[1]) // 2)
+      rez = (dim_x,dim_y)
+      fname = resource_folder + font_name[:-4] + "_" + tchar +".png" #Need to cut off file extension
+      MakeImg(tchar,font, fname ,rez,offset)
+      return (fname + "," + tchar)
 
+def associate(f_association):
+    with open(training_file, 'a') as f:
+        f.write(f_association + "\n")
+
+#Get data for worker threads
 fonts = get_fonts()
-setup_folders()
 chars = list(string.ascii_letters) + list(string.digits)
-f_association = []
+setup_folders()
 
-#Do the work
+#Make the pool
+pool = mp.Pool(processes=8) #Currently selected for my laptop, is there a better way?
+#use apply_async because we have many different arguements to loop over but also needs to be concurrant
 for font_name in fonts:
-  for tchar in chars:
-    font = ImageFont.truetype(font_name , 16)
-    size = font.getsize(tchar)
-    offset = ((dim_x - size[0]) // 2, (dim_y - size[1]) // 2)
-    rez = (dim_x,dim_y)
-    fname = resource_folder + font_name[:-4] + "_" + tchar +".png" #Need to cut off file extension
-    MakeImg(tchar,font, fname ,rez,offset)
-    f_association.append(fname + "," + tchar)
-
-#Write out the training associations
-# Note, we could probably use less ram if we wrote this to disk periodically instead
-with open(training_file, 'w') as f:
-    f.write('\n'.join(f_association))
+    for tchar in chars:
+        pool.apply_async(make_specific_image, args=(font_name, tchar), callback = associate)
+#Done with the pool
+pool.close()
+pool.join()

@@ -79,7 +79,7 @@ for font_name in fonts:
                     for bred in range(255):
                         for bgreen in range(255):
                             for bblue in range(255):
-        pool.apply_async(make_specific_image, args=(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue), callback = associate)
+                                pool.apply_async(make_specific_image, args=(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue), callback = associate)
 #Done with the pool
 pool.close()
 pool.join()

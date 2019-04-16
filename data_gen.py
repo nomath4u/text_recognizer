@@ -1,4 +1,5 @@
 import numpy as np
+import shutil
 import string
 import os
 from PIL import Image, ImageFont, ImageDraw
@@ -6,6 +7,10 @@ from PIL import Image, ImageFont, ImageDraw
 dim_x = 32
 dim_y = 32
 resource_folder = "./font_data/"
+font_dir = "/usr/share/fonts/truetype"
+data_dir = "./font_data"
+training_file = "Train.csv"
+
 def MakeImg(t, f, fn, s = (100, 100), o = (16, 8)):
     '''
     Generate an image of text
@@ -28,12 +33,23 @@ def get_fonts():
                 fonts.append(file)
     return fonts
 
+def setup_folders():
+    #Clear it all out if we have done this before
+    if os.path.exists(data_dir):
+        shutil.rmtree(data_dir)
+        os.mkdir(data_dir)
+    if os.path.exists(training_file):
+        os.remove(training_file)
+
 fonts = get_fonts()
+setup_folders()
 chars = list(string.ascii_letters) + list(string.digits)
 f_association = []
+
+#Do the work
 for font_name in fonts:
   for tchar in chars:
-    font = ImageFont.truetype(font_name , 16) #eventual loop through all fonts
+    font = ImageFont.truetype(font_name , 16)
     size = font.getsize(tchar)
     offset = ((dim_x - size[0]) // 2, (dim_y - size[1]) // 2)
     rez = (dim_x,dim_y)
@@ -41,5 +57,7 @@ for font_name in fonts:
     MakeImg(tchar,font, fname ,rez,offset)
     f_association.append(fname + "," + tchar)
 
-with open('Train.csv', 'w') as f:
+#Write out the training associations
+# Note, we could probably use less ram if we wrote this to disk periodically instead
+with open(training_file, 'w') as f:
     f.write('\n'.join(f_association))

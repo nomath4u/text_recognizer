@@ -48,7 +48,7 @@ def setup_folders():
     os.mkdir(data_dir)
     if os.path.exists(training_file):
         os.remove(training_file)
-    
+    open(training_file, 'w').close() 
 def make_specific_image(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue):
       font = ImageFont.truetype(font_name , 16)
       size = font.getsize(tchar)
@@ -62,7 +62,7 @@ def make_specific_image(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bbl
       return (fname + "," + tchar)
 
 def associate(f_association):
-    with open(training_file, 'a') as f:
+    with open(training_file, 'a+') as f:
         f.write(f_association + "\n")
 
 #Get data for worker threads

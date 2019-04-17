@@ -1,5 +1,7 @@
+import gc
 import multiprocessing as mp
 import numpy as np
+#from pympler.tracker import SummaryTracker
 import shutil
 import string
 import os
@@ -11,10 +13,10 @@ resource_folder = "./font_data/"
 font_dir = "/usr/share/fonts/truetype"
 data_dir = "./font_data"
 training_file = "Train.csv"
+max_queue_size = 1000000 #Hacky thing
 
 #Global association :(
 f_association = []
-
 #Beginning ideas yoinked from https://nicholastsmith.wordpress.com/2017/10/14/deep-learning-ocr-using-tensorflow-and-python/
 
 def MakeImg(t, f, fn, s, o, bg_color, text_color):
@@ -28,10 +30,12 @@ def MakeImg(t, f, fn, s, o, bg_color, text_color):
     bg_color: Color of the background 
     text_color: Text color as a tuple (R,G, B) [0-255]
     '''
+
     img = Image.new('RGB', s, bg_color)
     draw = ImageDraw.Draw(img)
     draw.text(o, t, text_color, font = f)
     img.save(fn)
+    img.close()
 
 def get_fonts():
     fonts = []
@@ -49,13 +53,14 @@ def setup_folders():
     if os.path.exists(training_file):
         os.remove(training_file)
     open(training_file, 'w').close() 
-def make_specific_image(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue):
-      font = ImageFont.truetype(font_name , 16)
+
+def make_specific_image(font_name_idx, tchar, tred, tgreen, tblue, bred, bgreen, bblue):
+      font = ImageFont.truetype(fonts[font_name_idx] , 16)
       size = font.getsize(tchar)
       offset = ((dim_x - size[0]) // 2, (dim_y - size[1]) // 2)
       rez = (dim_x,dim_y)
       color_info = str(tred)+str(tgreen)+str(tblue)+str(bred)+str(bgreen)+str(bblue)
-      fname = resource_folder + font_name[:-4] + "_" + tchar + "_" + color_info + ".png"
+      fname = resource_folder + fonts[font_name_idx][:-4] + "_" + tchar + "_" + color_info + ".png"
       text_color = (tred, tgreen, tblue)
       bg_color =  (bred, bgreen, bblue)
       MakeImg(tchar,font, fname ,rez,offset, text_color, bg_color)
@@ -69,20 +74,22 @@ def associate(f_association):
 fonts = get_fonts()
 chars = list(string.ascii_letters) + list(string.digits)
 setup_folders()
-
+#tracker = SummaryTracker()
 #Make the pool
-pool = mp.Pool(processes=8) #Currently selected for my laptop, is there a better way?
+pool = mp.Pool()
 #use apply_async because we have many different arguements to loop over but also needs to be concurrant
-for font_name in fonts:
+for font_name_idx,font_name in enumerate(fonts):
     for tchar in chars:
-        for tred in range(255):
-            for tgreen in range(255):
-                for tblue in range(255):
-                    for bred in range(255):
-                        for bgreen in range(255):
-                            for bblue in range(255):
-                                #make_specific_image(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue) # This is just useful for debugging
-                                pool.apply_async(make_specific_image, args=(font_name, tchar, tred, tgreen, tblue, bred, bgreen, bblue), callback = associate)
+        for tcolor in range(255):
+            for bcolor in range(255):
+                if tcolor != bcolor:
+                    tred = tgreen = tblue = tcolor #We get all shades of gray this way
+                    bred = bgreen = bblue = bcolor
+        #make_specific_image(font_name_idx, tchar, tred, tgreen, tblue, bred, bgreen, bblue) # This is just useful for debugging
+                    pool.apply_async(make_specific_image, args=(font_name_idx, tchar, tred, tgreen, tblue, bred, bgreen, bblue), callback = associate)
+                    while(pool._taskqueue.qsize() > max_queue_size ):
+                        continue
+                                #tracker.print_diff()
 #Done with the pool
 pool.close()
 pool.join()
